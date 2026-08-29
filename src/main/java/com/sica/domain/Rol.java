@@ -5,21 +5,21 @@ import java.util.List;
 
 /**
  * Entidad de dominio: Rol del sistema.
- * Un rol agrupa permisos que determinan qué puede hacer un usuario.
+ * Corresponde a la tabla `roles` (columna `nombre_rol`).
  */
 public class Rol {
 
     private int id;
-    private String nombre;
+    private String nombreRol;
     private List<Permiso> permisos;
 
     public Rol() {
         this.permisos = new ArrayList<>();
     }
 
-    public Rol(int id, String nombre) {
+    public Rol(int id, String nombreRol) {
         this.id = id;
-        this.nombre = nombre;
+        this.nombreRol = nombreRol;
         this.permisos = new ArrayList<>();
     }
 
@@ -27,8 +27,8 @@ public class Rol {
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getNombreRol() { return nombreRol; }
+    public void setNombreRol(String nombreRol) { this.nombreRol = nombreRol; }
 
     public List<Permiso> getPermisos() { return permisos; }
     public void setPermisos(List<Permiso> permisos) { this.permisos = permisos; }

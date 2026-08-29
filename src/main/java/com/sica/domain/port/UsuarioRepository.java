@@ -5,8 +5,7 @@ import java.util.List;
 
 /**
  * Puerto de salida: Repositorio de Usuarios.
- * Define las operaciones de persistencia que la capa de dominio necesita.
- * La implementación concreta está en infrastructure/persistence.
+ * La BD usa 'email' para login (no 'username').
  */
 public interface UsuarioRepository {
 
@@ -14,7 +13,7 @@ public interface UsuarioRepository {
 
     Usuario findById(int id);
 
-    Usuario findByUsername(String username);
+    Usuario findByEmail(String email);
 
     List<Usuario> findAll();
 
