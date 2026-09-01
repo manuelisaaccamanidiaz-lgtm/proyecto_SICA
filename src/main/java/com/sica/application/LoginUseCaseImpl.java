@@ -1,32 +1,32 @@
 package com.sica.application;
 
-import com.sica.domain.BitacoraAuditoria;
 import com.sica.domain.Usuario;
-import com.sica.domain.port.BitacoraAuditoriaRepository;
 import com.sica.domain.port.UsuarioRepository;
 import com.sica.infrastructure.config.PasswordUtil;
 
-import java.time.LocalDateTime;
-
 /**
- * Implementación del caso de uso de inicio de sesión.
+ * Implementacion del caso de uso de inicio de sesion.
  *
  * Flujo:
  * 1. Busca el usuario por email
- * 2. Verifica que esté activo
- * 3. Verifica la contraseña con BCrypt
- * 4. Registra el intento en la bitácora de auditoría
- * 5. Retorna el usuario o lanza excepción
+ * 2. Verifica que este activo
+ * 3. Verifica la contrasena con BCrypt
+ * 4. Verifica permiso RBAC "acceder_sistema"
+ * 5. Registra el intento en la bitacora de auditoria via AuditoriaService
+ * 6. Retorna el usuario o lanza excepcion
  */
 public class LoginUseCaseImpl implements LoginUseCase {
 
     private final UsuarioRepository usuarioRepository;
-    private final BitacoraAuditoriaRepository auditoriaRepository;
+    private final AutorizacionService autorizacionService;
+    private final AuditoriaService auditoriaService;
 
     public LoginUseCaseImpl(UsuarioRepository usuarioRepository,
-                            BitacoraAuditoriaRepository auditoriaRepository) {
+                            AutorizacionService autorizacionService,
+                            AuditoriaService auditoriaService) {
         this.usuarioRepository = usuarioRepository;
-        this.auditoriaRepository = auditoriaRepository;
+        this.autorizacionService = autorizacionService;
+        this.auditoriaService = auditoriaService;
     }
 
     @Override
@@ -35,46 +35,40 @@ public class LoginUseCaseImpl implements LoginUseCase {
         Usuario usuario = usuarioRepository.findByEmail(email);
 
         if (usuario == null) {
-            auditar(null, "LOGIN_FALLIDO", "Usuario no encontrado: " + email,
-                    "usuarios", null);
-            throw new RuntimeException("Credenciales inválidas.");
+            auditoriaService.registrar(null, "LOGIN_FALLIDO", "usuarios", 0,
+                    "Usuario no encontrado: " + email);
+            throw new RuntimeException("Credenciales invalidas.");
         }
 
-        // 2. Verificar que esté activo
+        // 2. Verificar que este activo
         if (!usuario.isEstaActivo()) {
-            auditar(usuario.getId(), "LOGIN_FALLIDO",
-                    "Usuario desactivado: " + email, "usuarios", usuario.getId());
-            throw new RuntimeException("Credenciales inválidas.");
+            auditoriaService.registrar(usuario.getId(), "LOGIN_FALLIDO",
+                    "usuarios", usuario.getId(),
+                    "Usuario desactivado: " + email);
+            throw new RuntimeException("Credenciales invalidas.");
         }
 
-        // 3. Verificar contraseña
+        // 3. Verificar contrasena
         if (!PasswordUtil.verify(plainPassword, usuario.getPasswordHash())) {
-            auditar(usuario.getId(), "LOGIN_FALLIDO",
-                    "Contraseña incorrecta para: " + email, "usuarios", usuario.getId());
-            throw new RuntimeException("Credenciales inválidas.");
+            auditoriaService.registrar(usuario.getId(), "LOGIN_FALLIDO",
+                    "usuarios", usuario.getId(),
+                    "Contrasena incorrecta para: " + email);
+            throw new RuntimeException("Credenciales invalidas.");
         }
 
-        // 4. Login exitoso
-        auditar(usuario.getId(), "LOGIN_EXITOSO",
-                "Sesión iniciada: " + email, "usuarios", usuario.getId());
+        // 4. Verificar permiso RBAC "acceder_sistema"
+        if (!autorizacionService.tienePermiso(usuario.getId(), "acceder_sistema")) {
+            auditoriaService.registrar(usuario.getId(), "LOGIN_FALLIDO",
+                    "usuarios", usuario.getId(),
+                    "Sin permiso 'acceder_sistema': " + email);
+            throw new RuntimeException("No tiene permiso para acceder al sistema.");
+        }
+
+        // 5. Login exitoso
+        auditoriaService.registrar(usuario.getId(), "LOGIN_EXITOSO",
+                "usuarios", usuario.getId(),
+                "Sesion iniciada: " + email);
 
         return usuario;
-    }
-
-    private void auditar(Integer usuarioId, String accion, String detalles,
-                         String tabla, Integer registroId) {
-        try {
-            BitacoraAuditoria registro = new BitacoraAuditoria();
-            registro.setUsuarioId(usuarioId);
-            registro.setAccionRealizada(accion);
-            registro.setTablaAfectada(tabla);
-            registro.setRegistroIdAfectado(registroId);
-            registro.setDetalles(detalles);
-            registro.setFechaHora(LocalDateTime.now());
-            auditoriaRepository.guardar(registro);
-        } catch (Exception e) {
-            // La auditoría no debe bloquear el login
-            System.err.println("[SICA] Warning: No se pudo registrar auditoría: " + e.getMessage());
-        }
     }
 }

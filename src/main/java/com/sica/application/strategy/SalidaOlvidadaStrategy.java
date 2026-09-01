@@ -1,45 +1,59 @@
 package com.sica.application.strategy;
 
+import com.sica.application.AuditoriaService;
+import com.sica.application.AutorizacionService;
 import com.sica.domain.*;
 import com.sica.domain.port.*;
 
 import java.time.LocalDateTime;
 
 /**
- * Flujo 4: Salida Olvidada (Regularización).
- * Una persona que está "Dentro" olvidó registrar su salida.
+ * Flujo 4: Salida Olvidada (Regularizacion).
+ * Una persona que esta "Dentro" olvido registrar su salida.
  * El guarda busca la visita en curso por documento de la persona
  * y la cierra con la fecha/hora actual.
+ *
+ * Requiere permiso: regularizar_salida
  */
 public class SalidaOlvidadaStrategy implements FlujoAccesoStrategy {
 
     private final PersonaRepository personaRepository;
     private final VisitaRepository visitaRepository;
     private final VisitaEstadoRepository visitaEstadoRepository;
-    private final BitacoraAuditoriaRepository auditoriaRepository;
+    private final AuditoriaService auditoriaService;
+    private final AutorizacionService autorizacionService;
 
     public SalidaOlvidadaStrategy(PersonaRepository personaRepository,
                                    VisitaRepository visitaRepository,
                                    VisitaEstadoRepository visitaEstadoRepository,
-                                   BitacoraAuditoriaRepository auditoriaRepository) {
+                                   AuditoriaService auditoriaService,
+                                   AutorizacionService autorizacionService) {
         this.personaRepository = personaRepository;
         this.visitaRepository = visitaRepository;
         this.visitaEstadoRepository = visitaEstadoRepository;
-        this.auditoriaRepository = auditoriaRepository;
+        this.auditoriaService = auditoriaService;
+        this.autorizacionService = autorizacionService;
     }
 
     @Override
     public String getNombreFlujo() {
-        return "Salida Olvidada (Regularización)";
+        return "Salida Olvidada (Regularizacion)";
     }
 
     @Override
     public ResultadoAcceso procesar(SolicitudAcceso solicitud) {
         try {
+            // 0. Verificar permiso RBAC
+            if (!autorizacionService.tienePermiso(solicitud.getUsuarioId(), "regularizar_salida")) {
+                return ResultadoAcceso.fallo(
+                    "ACCESO DENEGADO: No tiene permiso 'regularizar_salida'. "
+                    + "Contacte al administrador.");
+            }
+
             // 1. Se requiere documento o ID de la persona
             Persona persona = buscarPersona(solicitud);
             if (persona == null) {
-                return ResultadoAcceso.fallo("No se encontró la persona con los datos proporcionados.");
+                return ResultadoAcceso.fallo("No se encontro la persona con los datos proporcionados.");
             }
 
             // 2. Buscar la visita en curso de esa persona
@@ -54,14 +68,14 @@ public class SalidaOlvidadaStrategy implements FlujoAccesoStrategy {
 
             if (visitaEnCurso == null) {
                 return ResultadoAcceso.fallo(
-                    "No se encontró visita en curso para '" + persona.getNombre()
+                    "No se encontro visita en curso para '" + persona.getNombre()
                     + "'. La persona puede no haber registrado entrada.");
             }
 
             // 3. Obtener estado "Fuera"
             var estadoFuera = visitaEstadoRepository.findByNombreEstado("Fuera");
             if (estadoFuera == null) {
-                return ResultadoAcceso.fallo("Error: Estado 'Fuera' no encontrado en catálogo.");
+                return ResultadoAcceso.fallo("Error: Estado 'Fuera' no encontrado en catalogo.");
             }
 
             // 4. Cerrar la visita (regularizar la salida)
@@ -80,7 +94,8 @@ public class SalidaOlvidadaStrategy implements FlujoAccesoStrategy {
             // 6. Auditar
             int userId = solicitud.getUsuarioId();
             Integer regUserId = visitaEnCurso.getVisitaAprobadaPor();
-            auditar(userId > 0 ? userId : (regUserId != null ? regUserId : 0),
+            auditoriaService.registrar(
+                    userId > 0 ? userId : (regUserId != null ? regUserId : 0),
                     "SALIDA_OLVIDADA_REGULARIZACION", "visitas", visitaEnCurso.getId(),
                     "Salida olvidada regularizada para: " + persona.getNombre()
                     + " | Visita ID: " + visitaEnCurso.getId()
@@ -108,20 +123,5 @@ public class SalidaOlvidadaStrategy implements FlujoAccesoStrategy {
             return personaRepository.findByDocumentoIdentidad(s.getDocumentoIdentidad());
         }
         return null;
-    }
-
-    private void auditar(int userId, String accion, String tabla, int registroId, String detalle) {
-        try {
-            BitacoraAuditoria reg = new BitacoraAuditoria();
-            reg.setUsuarioId(userId);
-            reg.setAccionRealizada(accion);
-            reg.setTablaAfectada(tabla);
-            reg.setRegistroIdAfectado(registroId);
-            reg.setDetalles(detalle);
-            reg.setFechaHora(LocalDateTime.now());
-            auditoriaRepository.guardar(reg);
-        } catch (Exception e) {
-            System.err.println("[SICA] Warning: auditoría falló: " + e.getMessage());
-        }
     }
 }

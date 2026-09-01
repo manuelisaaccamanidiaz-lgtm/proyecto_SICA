@@ -1,6 +1,7 @@
 package com.sica.application.strategy;
 
-import com.sica.domain.BitacoraAuditoria;
+import com.sica.application.AuditoriaService;
+import com.sica.application.AutorizacionService;
 import com.sica.domain.Persona;
 import com.sica.domain.Visita;
 import com.sica.domain.TipoPersona;
@@ -12,7 +13,9 @@ import java.time.LocalDateTime;
  * Flujo 1: Invitado Pre-Registrado.
  * La persona ya existe en la BD como tipo INVITADO.
  * Se verifica su estado de acceso, se busca si ya tiene visita en curso,
- * y se le registra la entrada si todo está en orden.
+ * y se le registra la entrada si todo esta en orden.
+ *
+ * Requiere permiso: registrar_visita
  */
 public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
 
@@ -20,18 +23,21 @@ public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
     private final VisitaRepository visitaRepository;
     private final VisitaEstadoRepository visitaEstadoRepository;
     private final PersonaEstadoAccesoRepository personaEstadoAccesoRepository;
-    private final BitacoraAuditoriaRepository auditoriaRepository;
+    private final AuditoriaService auditoriaService;
+    private final AutorizacionService autorizacionService;
 
     public InvitadoPreRegistradoStrategy(PersonaRepository personaRepository,
                                           VisitaRepository visitaRepository,
                                           VisitaEstadoRepository visitaEstadoRepository,
                                           PersonaEstadoAccesoRepository personaEstadoAccesoRepository,
-                                          BitacoraAuditoriaRepository auditoriaRepository) {
+                                          AuditoriaService auditoriaService,
+                                          AutorizacionService autorizacionService) {
         this.personaRepository = personaRepository;
         this.visitaRepository = visitaRepository;
         this.visitaEstadoRepository = visitaEstadoRepository;
         this.personaEstadoAccesoRepository = personaEstadoAccesoRepository;
-        this.auditoriaRepository = auditoriaRepository;
+        this.auditoriaService = auditoriaService;
+        this.autorizacionService = autorizacionService;
     }
 
     @Override
@@ -42,10 +48,17 @@ public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
     @Override
     public ResultadoAcceso procesar(SolicitudAcceso solicitud) {
         try {
+            // 0. Verificar permiso RBAC
+            if (!autorizacionService.tienePermiso(solicitud.getUsuarioId(), "registrar_visita")) {
+                return ResultadoAcceso.fallo(
+                    "ACCESO DENEGADO: No tiene permiso 'registrar_visita'. "
+                    + "Contacte al administrador.");
+            }
+
             // 1. Buscar la persona por ID o documento
             Persona persona = buscarPersona(solicitud);
             if (persona == null) {
-                return ResultadoAcceso.fallo("No se encontró la persona con los datos proporcionados.");
+                return ResultadoAcceso.fallo("No se encontro la persona con los datos proporcionados.");
             }
 
             // 2. Verificar que sea tipo INVITADO
@@ -75,10 +88,10 @@ public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
                 }
             }
 
-            // 5. Obtener estado "Dentro" del catálogo
+            // 5. Obtener estado "Dentro" del catalogo
             var estadoDentro = visitaEstadoRepository.findByNombreEstado("Dentro");
             if (estadoDentro == null) {
-                return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catálogo.");
+                return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catalogo.");
             }
 
             // 6. Crear la visita
@@ -93,7 +106,8 @@ public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
             Visita guardada = visitaRepository.guardar(visita);
 
             // 7. Auditar
-            auditar(solicitud.getUsuarioId(), "ACCESO_INVITADO_PRE_REGISTRADO", "visitas", guardada.getId(),
+            auditoriaService.registrar(solicitud.getUsuarioId(),
+                    "ACCESO_INVITADO_PRE_REGISTRADO", "visitas", guardada.getId(),
                     "Invitado pre-registrado: " + persona.getNombre()
                     + " | Doc: " + persona.getDocumentoIdentidad()
                     + " | Visita ID: " + guardada.getId());
@@ -117,20 +131,5 @@ public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
             return personaRepository.findByDocumentoIdentidad(s.getDocumentoIdentidad());
         }
         return null;
-    }
-
-    private void auditar(int userId, String accion, String tabla, int registroId, String detalle) {
-        try {
-            BitacoraAuditoria reg = new BitacoraAuditoria();
-            reg.setUsuarioId(userId);
-            reg.setAccionRealizada(accion);
-            reg.setTablaAfectada(tabla);
-            reg.setRegistroIdAfectado(registroId);
-            reg.setDetalles(detalle);
-            reg.setFechaHora(LocalDateTime.now());
-            auditoriaRepository.guardar(reg);
-        } catch (Exception e) {
-            System.err.println("[SICA] Warning: auditoría falló: " + e.getMessage());
-        }
     }
 }

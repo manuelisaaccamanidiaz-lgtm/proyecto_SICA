@@ -1,5 +1,7 @@
 package com.sica.application.strategy;
 
+import com.sica.application.AuditoriaService;
+import com.sica.application.AutorizacionService;
 import com.sica.domain.*;
 import com.sica.domain.port.*;
 
@@ -7,10 +9,12 @@ import java.time.LocalDateTime;
 
 /**
  * Flujo 2: Invitado No Anunciado.
- * La persona NO está pre-registrada en la BD.
- * El guarda de seguridad la registra al vuelo con datos básicos,
+ * La persona NO esta pre-registrada en la BD.
+ * El guarda de seguridad la registra al vuelo con datos basicos,
  * se crea la persona tipo INVITADO y se le registra la entrada.
- * Requiere aprobación de un funcionario (usuarioId).
+ * Requiere aprobacion de un funcionario (usuarioId).
+ *
+ * Requiere permiso: registrar_visita
  */
 public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
 
@@ -18,18 +22,21 @@ public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
     private final VisitaRepository visitaRepository;
     private final VisitaEstadoRepository visitaEstadoRepository;
     private final PersonaEstadoAccesoRepository personaEstadoAccesoRepository;
-    private final BitacoraAuditoriaRepository auditoriaRepository;
+    private final AuditoriaService auditoriaService;
+    private final AutorizacionService autorizacionService;
 
     public InvitadoNoAnunciadoStrategy(PersonaRepository personaRepository,
                                         VisitaRepository visitaRepository,
                                         VisitaEstadoRepository visitaEstadoRepository,
                                         PersonaEstadoAccesoRepository personaEstadoAccesoRepository,
-                                        BitacoraAuditoriaRepository auditoriaRepository) {
+                                        AuditoriaService auditoriaService,
+                                        AutorizacionService autorizacionService) {
         this.personaRepository = personaRepository;
         this.visitaRepository = visitaRepository;
         this.visitaEstadoRepository = visitaEstadoRepository;
         this.personaEstadoAccesoRepository = personaEstadoAccesoRepository;
-        this.auditoriaRepository = auditoriaRepository;
+        this.auditoriaService = auditoriaService;
+        this.autorizacionService = autorizacionService;
     }
 
     @Override
@@ -40,9 +47,16 @@ public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
     @Override
     public ResultadoAcceso procesar(SolicitudAcceso solicitud) {
         try {
+            // 0. Verificar permiso RBAC
+            if (!autorizacionService.tienePermiso(solicitud.getUsuarioId(), "registrar_visita")) {
+                return ResultadoAcceso.fallo(
+                    "ACCESO DENEGADO: No tiene permiso 'registrar_visita'. "
+                    + "Contacte al administrador.");
+            }
+
             // 1. Verificar que se provea documento de identidad
             if (solicitud.getDocumentoIdentidad() == null || solicitud.getDocumentoIdentidad().isEmpty()) {
-                return ResultadoAcceso.fallo("Se requiere número de documento de identidad.");
+                return ResultadoAcceso.fallo("Se requiere numero de documento de identidad.");
             }
             if (solicitud.getNombreInvitado() == null || solicitud.getNombreInvitado().isEmpty()) {
                 return ResultadoAcceso.fallo("Se requiere el nombre del invitado.");
@@ -56,11 +70,10 @@ public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
                 persona = new Persona();
                 persona.setNombre(solicitud.getNombreInvitado());
                 persona.setDocumentoIdentidad(solicitud.getDocumentoIdentidad());
-                persona.setEmpresaId(null); // sin empresa
+                persona.setEmpresaId(null);
                 persona.setTipoPersona(TipoPersona.INVITADO);
                 persona.setUrlFoto(null);
 
-                // Buscar estado "Activo" por defecto
                 var estadoActivo = personaEstadoAccesoRepository.findByNombreEstado("Activo");
                 if (estadoActivo != null) {
                     persona.setEstadoAccesoId(estadoActivo.getId());
@@ -69,7 +82,7 @@ public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
                 persona = personaRepository.guardar(persona);
             }
 
-            // 3. Verificar estado de acceso (puede haber sido prohibido)
+            // 3. Verificar estado de acceso
             if (persona.getEstadoAccesoId() != null) {
                 var estado = personaEstadoAccesoRepository.findById(persona.getEstadoAccesoId());
                 if (estado != null && estado.getNombreEstado().contains("Prohibicion")) {
@@ -92,10 +105,10 @@ public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
             // 5. Obtener estado "Dentro"
             var estadoDentro = visitaEstadoRepository.findByNombreEstado("Dentro");
             if (estadoDentro == null) {
-                return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catálogo.");
+                return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catalogo.");
             }
 
-            // 6. Crear la visita (con aprobación del funcionario)
+            // 6. Crear la visita (con aprobacion del funcionario)
             Visita visita = new Visita();
             visita.setPersonaId(persona.getId());
             visita.setFechaEntrada(LocalDateTime.now());
@@ -107,7 +120,8 @@ public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
             Visita guardada = visitaRepository.guardar(visita);
 
             // 7. Auditar
-            auditar(solicitud.getUsuarioId(), "ACCESO_INVITADO_NO_ANUNCIADO", "visitas", guardada.getId(),
+            auditoriaService.registrar(solicitud.getUsuarioId(),
+                    "ACCESO_INVITADO_NO_ANUNCIADO", "visitas", guardada.getId(),
                     "Invitado no anunciado registrado: " + persona.getNombre()
                     + " | Doc: " + persona.getDocumentoIdentidad()
                     + " | Visita ID: " + guardada.getId());
@@ -122,21 +136,6 @@ public class InvitadoNoAnunciadoStrategy implements FlujoAccesoStrategy {
 
         } catch (Exception e) {
             return ResultadoAcceso.fallo("Error al procesar invitado no anunciado: " + e.getMessage());
-        }
-    }
-
-    private void auditar(int userId, String accion, String tabla, int registroId, String detalle) {
-        try {
-            BitacoraAuditoria reg = new BitacoraAuditoria();
-            reg.setUsuarioId(userId);
-            reg.setAccionRealizada(accion);
-            reg.setTablaAfectada(tabla);
-            reg.setRegistroIdAfectado(registroId);
-            reg.setDetalles(detalle);
-            reg.setFechaHora(LocalDateTime.now());
-            auditoriaRepository.guardar(reg);
-        } catch (Exception e) {
-            System.err.println("[SICA] Warning: auditoría falló: " + e.getMessage());
         }
     }
 }

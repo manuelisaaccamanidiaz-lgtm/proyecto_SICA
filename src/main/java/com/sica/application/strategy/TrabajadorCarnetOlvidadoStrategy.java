@@ -1,5 +1,7 @@
 package com.sica.application.strategy;
 
+import com.sica.application.AuditoriaService;
+import com.sica.application.AutorizacionService;
 import com.sica.domain.*;
 import com.sica.domain.port.*;
 
@@ -8,8 +10,10 @@ import java.time.LocalDateTime;
 /**
  * Flujo 3: Trabajador con Carnet Olvidado.
  * El trabajador es conocido en el sistema (tipo TRABAJADOR) pero no presenta carnet.
- * Se verifica su identidad por documento, se confirma que esté activo,
+ * Se verifica su identidad por documento, se confirma que este activo,
  * y se le permite el paso.
+ *
+ * Requiere permiso: registrar_visita
  */
 public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
 
@@ -17,18 +21,21 @@ public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
     private final VisitaRepository visitaRepository;
     private final VisitaEstadoRepository visitaEstadoRepository;
     private final PersonaEstadoAccesoRepository personaEstadoAccesoRepository;
-    private final BitacoraAuditoriaRepository auditoriaRepository;
+    private final AuditoriaService auditoriaService;
+    private final AutorizacionService autorizacionService;
 
     public TrabajadorCarnetOlvidadoStrategy(PersonaRepository personaRepository,
                                              VisitaRepository visitaRepository,
                                              VisitaEstadoRepository visitaEstadoRepository,
                                              PersonaEstadoAccesoRepository personaEstadoAccesoRepository,
-                                             BitacoraAuditoriaRepository auditoriaRepository) {
+                                             AuditoriaService auditoriaService,
+                                             AutorizacionService autorizacionService) {
         this.personaRepository = personaRepository;
         this.visitaRepository = visitaRepository;
         this.visitaEstadoRepository = visitaEstadoRepository;
         this.personaEstadoAccesoRepository = personaEstadoAccesoRepository;
-        this.auditoriaRepository = auditoriaRepository;
+        this.auditoriaService = auditoriaService;
+        this.autorizacionService = autorizacionService;
     }
 
     @Override
@@ -39,16 +46,23 @@ public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
     @Override
     public ResultadoAcceso procesar(SolicitudAcceso solicitud) {
         try {
+            // 0. Verificar permiso RBAC
+            if (!autorizacionService.tienePermiso(solicitud.getUsuarioId(), "registrar_visita")) {
+                return ResultadoAcceso.fallo(
+                    "ACCESO DENEGADO: No tiene permiso 'registrar_visita'. "
+                    + "Contacte al administrador.");
+            }
+
             // 1. Se requiere documento de identidad para verificar al trabajador
             if (solicitud.getDocumentoIdentidad() == null || solicitud.getDocumentoIdentidad().isEmpty()) {
-                return ResultadoAcceso.fallo("Se requiere el número de documento para verificar al trabajador.");
+                return ResultadoAcceso.fallo("Se requiere el numero de documento para verificar al trabajador.");
             }
 
             // 2. Buscar la persona por documento
             Persona persona = personaRepository.findByDocumentoIdentidad(solicitud.getDocumentoIdentidad());
             if (persona == null) {
                 return ResultadoAcceso.fallo(
-                    "No se encontró ninguna persona con el documento: " + solicitud.getDocumentoIdentidad());
+                    "No se encontro ninguna persona con el documento: " + solicitud.getDocumentoIdentidad());
             }
 
             // 3. Verificar que sea TRABAJADOR
@@ -81,7 +95,7 @@ public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
             // 6. Obtener estado "Dentro"
             var estadoDentro = visitaEstadoRepository.findByNombreEstado("Dentro");
             if (estadoDentro == null) {
-                return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catálogo.");
+                return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catalogo.");
             }
 
             // 7. Registrar la visita (sin placa, sin carnet, solo documento verificado)
@@ -90,13 +104,14 @@ public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
             visita.setFechaEntrada(LocalDateTime.now());
             visita.setFechaSalida(null);
             visita.setEstadoVisitaId(estadoDentro.getId());
-            visita.setVehiculoPlaca(solicitud.getVehiculoPlaca()); // puede ser null
+            visita.setVehiculoPlaca(solicitud.getVehiculoPlaca());
             visita.setVisitaAprobadaPor(solicitud.getUsuarioId());
 
             Visita guardada = visitaRepository.guardar(visita);
 
             // 8. Auditar
-            auditar(solicitud.getUsuarioId(), "ACCESO_TRABAJADOR_CARNET_OLVIDADO", "visitas", guardada.getId(),
+            auditoriaService.registrar(solicitud.getUsuarioId(),
+                    "ACCESO_TRABAJADOR_CARNET_OLVIDADO", "visitas", guardada.getId(),
                     "Trabajador sin carnet verificado por documento: " + persona.getNombre()
                     + " | Doc: " + persona.getDocumentoIdentidad()
                     + " | Visita ID: " + guardada.getId());
@@ -109,21 +124,6 @@ public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
 
         } catch (Exception e) {
             return ResultadoAcceso.fallo("Error al procesar trabajador: " + e.getMessage());
-        }
-    }
-
-    private void auditar(int userId, String accion, String tabla, int registroId, String detalle) {
-        try {
-            BitacoraAuditoria reg = new BitacoraAuditoria();
-            reg.setUsuarioId(userId);
-            reg.setAccionRealizada(accion);
-            reg.setTablaAfectada(tabla);
-            reg.setRegistroIdAfectado(registroId);
-            reg.setDetalles(detalle);
-            reg.setFechaHora(LocalDateTime.now());
-            auditoriaRepository.guardar(reg);
-        } catch (Exception e) {
-            System.err.println("[SICA] Warning: auditoría falló: " + e.getMessage());
         }
     }
 }
