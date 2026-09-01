@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,6 +66,22 @@ public class PersonaEstadoAccesoRepositoryImpl implements PersonaEstadoAccesoRep
             return estados;
         } catch (SQLException e) {
             throw new RuntimeException("Error al listar estados de acceso: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public PersonaEstadoAcceso guardar(PersonaEstadoAcceso estado) {
+        String sql = "INSERT INTO persona_estados_acceso (nombre_estado) VALUES (?)";
+        try (Connection conn = dbConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, estado.getNombreEstado());
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) estado.setId(keys.getInt(1));
+            }
+            return estado;
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al guardar estado de acceso: " + e.getMessage(), e);
         }
     }
 
