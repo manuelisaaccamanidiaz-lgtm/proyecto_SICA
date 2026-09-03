@@ -1,24 +1,20 @@
 package com.sica.domain;
 
 /**
- * Entidad de dominio: Persona que visita la empresa.
- * Puede estar asociada a una empresa (opcional).
+ * Entidad de dominio: Persona (trabajador o invitado).
+ * Corresponde a la tabla `personas` del esquema oficial.
  */
 public class Persona {
 
     private int id;
     private String nombre;
-    private String documento;
-    private Integer empresaId; // nullable: puede no estar asociada a una empresa
+    private String documentoIdentidad;
+    private Integer empresaId;
+    private TipoPersona tipoPersona;
+    private Integer estadoAccesoId;
+    private String urlFoto;
 
     public Persona() {}
-
-    public Persona(int id, String nombre, String documento, Integer empresaId) {
-        this.id = id;
-        this.nombre = nombre;
-        this.documento = documento;
-        this.empresaId = empresaId;
-    }
 
     // Getters y setters
     public int getId() { return id; }
@@ -27,9 +23,18 @@ public class Persona {
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
 
-    public String getDocumento() { return documento; }
-    public void setDocumento(String documento) { this.documento = documento; }
+    public String getDocumentoIdentidad() { return documentoIdentidad; }
+    public void setDocumentoIdentidad(String documentoIdentidad) { this.documentoIdentidad = documentoIdentidad; }
 
     public Integer getEmpresaId() { return empresaId; }
     public void setEmpresaId(Integer empresaId) { this.empresaId = empresaId; }
+
+    public TipoPersona getTipoPersona() { return tipoPersona; }
+    public void setTipoPersona(TipoPersona tipoPersona) { this.tipoPersona = tipoPersona; }
+
+    public Integer getEstadoAccesoId() { return estadoAccesoId; }
+    public void setEstadoAccesoId(Integer estadoAccesoId) { this.estadoAccesoId = estadoAccesoId; }
+
+    public String getUrlFoto() { return urlFoto; }
+    public void setUrlFoto(String urlFoto) { this.urlFoto = urlFoto; }
 }

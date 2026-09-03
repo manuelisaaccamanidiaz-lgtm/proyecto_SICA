@@ -12,7 +12,7 @@ public interface RolRepository {
 
     Rol findById(int id);
 
-    Rol findByNombre(String nombre);
+    Rol findByNombreRol(String nombreRol);
 
     List<Rol> findAll();
 

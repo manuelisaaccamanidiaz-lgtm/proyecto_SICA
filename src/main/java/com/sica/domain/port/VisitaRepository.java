@@ -16,7 +16,9 @@ public interface VisitaRepository {
 
     List<Visita> findByPersonaId(int personaId);
 
-    List<Visita> findEnCurso(); // visitas sin fecha_hora_salida
+    List<Visita> findEnCurso(); // visitas sin fecha_salida
+
+    List<Visita> findByEstadoVisitaId(int estadoVisitaId);
 
     List<Visita> findByFechaEntrada(String fecha);
 

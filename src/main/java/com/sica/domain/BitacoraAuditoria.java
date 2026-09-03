@@ -4,40 +4,40 @@ import java.time.LocalDateTime;
 
 /**
  * Entidad de dominio: Bitácora de auditoría.
- * Registra cada acción relevante realizada por un usuario en el sistema,
- * permitiendo trazabilidad y auditoría de operaciones.
+ * Corresponde a la tabla `bitacora_auditoria` del esquema oficial.
+ * El id es BIGINT en la BD.
  */
 public class BitacoraAuditoria {
 
-    private int id;
-    private int usuarioId;
-    private String accion;
-    private String detalle;
+    private long id;
+    private Integer usuarioId;
     private LocalDateTime fechaHora;
+    private String accionRealizada;
+    private String tablaAfectada;
+    private Integer registroIdAfectado;
+    private String detalles;
 
     public BitacoraAuditoria() {}
 
-    public BitacoraAuditoria(int id, int usuarioId, String accion, String detalle, LocalDateTime fechaHora) {
-        this.id = id;
-        this.usuarioId = usuarioId;
-        this.accion = accion;
-        this.detalle = detalle;
-        this.fechaHora = fechaHora;
-    }
-
     // Getters y setters
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public long getId() { return id; }
+    public void setId(long id) { this.id = id; }
 
-    public int getUsuarioId() { return usuarioId; }
-    public void setUsuarioId(int usuarioId) { this.usuarioId = usuarioId; }
-
-    public String getAccion() { return accion; }
-    public void setAccion(String accion) { this.accion = accion; }
-
-    public String getDetalle() { return detalle; }
-    public void setDetalle(String detalle) { this.detalle = detalle; }
+    public Integer getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Integer usuarioId) { this.usuarioId = usuarioId; }
 
     public LocalDateTime getFechaHora() { return fechaHora; }
     public void setFechaHora(LocalDateTime fechaHora) { this.fechaHora = fechaHora; }
+
+    public String getAccionRealizada() { return accionRealizada; }
+    public void setAccionRealizada(String accionRealizada) { this.accionRealizada = accionRealizada; }
+
+    public String getTablaAfectada() { return tablaAfectada; }
+    public void setTablaAfectada(String tablaAfectada) { this.tablaAfectada = tablaAfectada; }
+
+    public Integer getRegistroIdAfectado() { return registroIdAfectado; }
+    public void setRegistroIdAfectado(Integer registroIdAfectado) { this.registroIdAfectado = registroIdAfectado; }
+
+    public String getDetalles() { return detalles; }
+    public void setDetalles(String detalles) { this.detalles = detalles; }
 }

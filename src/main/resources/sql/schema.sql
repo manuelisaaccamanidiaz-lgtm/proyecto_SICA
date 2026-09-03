@@ -1,125 +1,115 @@
--- ============================================================
--- SICA - Sistema de Control de Acceso
--- Esquema de base de datos MySQL
--- ============================================================
+-- =========== TABLAS DE AUTENTICACIÓN Y AUTORIZACIÓN (RBAC) ===========
 
-CREATE DATABASE IF NOT EXISTS sica
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS SICA;
+USE SICA;
 
-USE sica;
-
--- ============================================================
--- Tabla: roles
--- ============================================================
+-- Define los roles disponibles en el sistema
 CREATE TABLE roles (
-    id          INT             AUTO_INCREMENT PRIMARY KEY,
-    nombre      VARCHAR(50)     NOT NULL UNIQUE
-) ENGINE=InnoDB;
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_rol VARCHAR(50) UNIQUE NOT NULL -- 'Superusuario', 'Supervisor de Seguridad', 'Guarda de Seguridad', 'Funcionario de Empresa'
+);
 
--- ============================================================
--- Tabla: permisos
--- ============================================================
+-- Define cada acción granular que se puede realizar en el sistema
 CREATE TABLE permisos (
-    id              INT             AUTO_INCREMENT PRIMARY KEY,
-    nombre_permiso  VARCHAR(100)    NOT NULL UNIQUE,
-    descripcion     TEXT
-) ENGINE=InnoDB;
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_permiso VARCHAR(100) UNIQUE NOT NULL, -- ej. 'crear_usuario', 'registrar_visita', 'generar_reporte_auditoria'
+    descripcion TEXT
+);
 
--- ============================================================
--- Tabla: rol_permisos (relación N:M entre roles y permisos)
--- ============================================================
+-- Tabla de unión que asigna permisos a los roles
 CREATE TABLE rol_permisos (
-    rol_id      INT NOT NULL,
-    permiso_id  INT NOT NULL,
+    rol_id INT,
+    permiso_id INT,
     PRIMARY KEY (rol_id, permiso_id),
-    CONSTRAINT fk_rolpermisos_rol
-        FOREIGN KEY (rol_id)     REFERENCES roles(id)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT fk_rolpermisos_permiso
-        FOREIGN KEY (permiso_id) REFERENCES permisos(id)
-        ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+    FOREIGN KEY (rol_id) REFERENCES roles(id),
+    FOREIGN KEY (permiso_id) REFERENCES permisos(id)
+);
 
--- ============================================================
--- Tabla: usuarios
--- ============================================================
+-- Almacena los usuarios y su rol asignado
 CREATE TABLE usuarios (
-    id              INT             AUTO_INCREMENT PRIMARY KEY,
-    username        VARCHAR(50)     NOT NULL UNIQUE,
-    password_hash   VARCHAR(255)    NOT NULL,
-    rol_id          INT             NOT NULL,
-    CONSTRAINT fk_usuarios_rol
-        FOREIGN KEY (rol_id) REFERENCES roles(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB;
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL, -- En una aplicación real, esto debería ser un hash
+    rol_id INT,
+    esta_activo BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (rol_id) REFERENCES roles(id)
+);
 
--- ============================================================
--- Tabla: empresas
--- ============================================================
+
+-- =========== TABLAS DE CONSULTA (LOOKUP TABLES) PARA ESTADOS ===========
+
+-- Define los posibles estados de acceso de una persona
+CREATE TABLE persona_estados_acceso (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_estado VARCHAR(50) UNIQUE NOT NULL -- 'Activo', 'Con Prohibicion de Ingreso'
+);
+
+-- Define los posibles estados de una visita
+CREATE TABLE visita_estados (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_estado VARCHAR(50) UNIQUE NOT NULL -- 'Dentro', 'Fuera', 'Pendiente de Aprobacion', 'Aprobado', 'Rechazado', 'Expirado', etc.
+);
+
+
+-- =========== TABLAS OPERACIONALES DEL NEGOCIO ===========
+
+-- Almacena las empresas dentro del complejo
 CREATE TABLE empresas (
-    id      INT             AUTO_INCREMENT PRIMARY KEY,
-    nombre  VARCHAR(150)    NOT NULL
-) ENGINE=InnoDB;
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    contacto_principal VARCHAR(100)
+);
 
--- ============================================================
--- Tabla: personas
--- ============================================================
+-- Almacena a todas las personas (trabajadores e invitados)
 CREATE TABLE personas (
-    id          INT             AUTO_INCREMENT PRIMARY KEY,
-    nombre      VARCHAR(150)    NOT NULL,
-    documento   VARCHAR(20)     NOT NULL UNIQUE,
-    empresa_id  INT             NULL,
-    CONSTRAINT fk_personas_empresa
-        FOREIGN KEY (empresa_id) REFERENCES empresas(id)
-        ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB;
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    documento_identidad VARCHAR(20) UNIQUE NOT NULL,
+    empresa_id INT,
+    tipo_persona ENUM('Trabajador', 'Invitado') NOT NULL,
+    estado_acceso_id INT,
+    url_foto VARCHAR(255),
+    FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+    FOREIGN KEY (estado_acceso_id) REFERENCES persona_estados_acceso(id)
+);
 
--- ============================================================
--- Tabla: visitas
--- ============================================================
+-- Registro atómico de cada evento de entrada y salida
 CREATE TABLE visitas (
-    id                  INT         AUTO_INCREMENT PRIMARY KEY,
-    persona_id          INT         NOT NULL,
-    funcionario_id      INT         NOT NULL,
-    estado              VARCHAR(20) NOT NULL,
-    fecha_hora_entrada  DATETIME    NOT NULL,
-    fecha_hora_salida   DATETIME    NULL,
-    CONSTRAINT fk_visitas_persona
-        FOREIGN KEY (persona_id)     REFERENCES personas(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_visitas_funcionario
-        FOREIGN KEY (funcionario_id) REFERENCES usuarios(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB;
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    persona_id INT,
+    fecha_entrada DATETIME,
+    fecha_salida DATETIME,
+    estado_visita_id INT,
+    vehiculo_placa VARCHAR(10),
+    visita_aprobada_por INT, -- ID del usuario (Funcionario) que aprueba el ingreso no anunciado
+    FOREIGN KEY (persona_id) REFERENCES personas(id),
+    FOREIGN KEY (estado_visita_id) REFERENCES visita_estados(id),
+    FOREIGN KEY (visita_aprobada_por) REFERENCES usuarios(id)
+);
 
--- ============================================================
--- Tabla: incidentes
--- ============================================================
+-- Registro de incidentes de seguridad
 CREATE TABLE incidentes (
-    id                      INT         AUTO_INCREMENT PRIMARY KEY,
-    persona_id              INT         NOT NULL,
-    descripcion             TEXT        NOT NULL,
-    fecha                   DATE        NOT NULL,
-    usuario_registro_id     INT         NOT NULL,
-    CONSTRAINT fk_incidentes_persona
-        FOREIGN KEY (persona_id)             REFERENCES personas(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_incidentes_usuario
-        FOREIGN KEY (usuario_registro_id)    REFERENCES usuarios(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB;
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    visita_id INT, -- Un incidente ocurre durante una visita específica
+    reportado_por_id INT, -- ID del usuario (Supervisor) que reporta
+    fecha DATETIME NOT NULL,
+    descripcion TEXT NOT NULL,
+    FOREIGN KEY (visita_id) REFERENCES visitas(id),
+    FOREIGN KEY (reportado_por_id) REFERENCES usuarios(id)
+);
 
--- ============================================================
--- Tabla: bitacora_auditoria
--- ============================================================
+
+-- =========== TABLA DE AUDITORÍA ===========
+
+-- Bitácora para registrar todas las acciones importantes del sistema
 CREATE TABLE bitacora_auditoria (
-    id          INT             AUTO_INCREMENT PRIMARY KEY,
-    usuario_id  INT             NOT NULL,
-    accion      VARCHAR(100)    NOT NULL,
-    detalle     TEXT,
-    fecha_hora  DATETIME        NOT NULL,
-    CONSTRAINT fk_bitacora_usuario
-        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-        ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB;
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT,
+    fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    accion_realizada VARCHAR(255) NOT NULL, -- ej. 'LOGIN_EXITOSO', 'CREACION_PERSONA', 'CAMBIO_ESTADO_VISITA'
+    tabla_afectada VARCHAR(100),
+    registro_id_afectado INT,
+    detalles TEXT, -- Puede usarse para almacenar un resumen del cambio o datos en formato JSON
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);

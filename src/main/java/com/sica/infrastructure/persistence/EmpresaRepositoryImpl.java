@@ -10,6 +10,7 @@ import java.util.List;
 
 /**
  * Adaptador JDBC para el repositorio de Empresas.
+ * Columnas: id, nombre, contacto_principal.
  */
 public class EmpresaRepositoryImpl implements EmpresaRepository {
 
@@ -21,16 +22,15 @@ public class EmpresaRepositoryImpl implements EmpresaRepository {
 
     @Override
     public Empresa guardar(Empresa empresa) {
-        String sql = "INSERT INTO empresas (nombre) VALUES (?)";
+        String sql = "INSERT INTO empresas (nombre, contacto_principal) VALUES (?, ?)";
         try (Connection conn = dbConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, empresa.getNombre());
+            ps.setString(2, empresa.getContactoPrincipal());
             ps.executeUpdate();
 
             try (ResultSet keys = ps.getGeneratedKeys()) {
-                if (keys.next()) {
-                    empresa.setId(keys.getInt(1));
-                }
+                if (keys.next()) empresa.setId(keys.getInt(1));
             }
             return empresa;
         } catch (SQLException e) {
@@ -40,14 +40,12 @@ public class EmpresaRepositoryImpl implements EmpresaRepository {
 
     @Override
     public Empresa findById(int id) {
-        String sql = "SELECT id, nombre FROM empresas WHERE id = ?";
+        String sql = "SELECT id, nombre, contacto_principal FROM empresas WHERE id = ?";
         try (Connection conn = dbConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return mapRow(rs);
-                }
+                if (rs.next()) return mapRow(rs);
             }
             return null;
         } catch (SQLException e) {
@@ -57,14 +55,12 @@ public class EmpresaRepositoryImpl implements EmpresaRepository {
 
     @Override
     public List<Empresa> findAll() {
-        String sql = "SELECT id, nombre FROM empresas ORDER BY nombre";
+        String sql = "SELECT id, nombre, contacto_principal FROM empresas ORDER BY nombre";
         List<Empresa> empresas = new ArrayList<>();
         try (Connection conn = dbConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                empresas.add(mapRow(rs));
-            }
+            while (rs.next()) empresas.add(mapRow(rs));
             return empresas;
         } catch (SQLException e) {
             throw new RuntimeException("Error al listar empresas: " + e.getMessage(), e);
@@ -73,11 +69,12 @@ public class EmpresaRepositoryImpl implements EmpresaRepository {
 
     @Override
     public void actualizar(Empresa empresa) {
-        String sql = "UPDATE empresas SET nombre = ? WHERE id = ?";
+        String sql = "UPDATE empresas SET nombre=?, contacto_principal=? WHERE id=?";
         try (Connection conn = dbConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, empresa.getNombre());
-            ps.setInt(2, empresa.getId());
+            ps.setString(2, empresa.getContactoPrincipal());
+            ps.setInt(3, empresa.getId());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error al actualizar empresa: " + e.getMessage(), e);
@@ -96,12 +93,11 @@ public class EmpresaRepositoryImpl implements EmpresaRepository {
         }
     }
 
-    // ─── Mapper privado ─────────────────────────────────────
-
     private Empresa mapRow(ResultSet rs) throws SQLException {
         Empresa e = new Empresa();
         e.setId(rs.getInt("id"));
         e.setNombre(rs.getString("nombre"));
+        e.setContactoPrincipal(rs.getString("contacto_principal"));
         return e;
     }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 
 /**
  * Puerto de salida: Repositorio de Incidentes.
+ * Ahora se asocia a una visita_id en lugar de persona_id.
  */
 public interface IncidenteRepository {
 
@@ -14,7 +15,7 @@ public interface IncidenteRepository {
 
     List<Incidente> findAll();
 
-    List<Incidente> findByPersonaId(int personaId);
+    List<Incidente> findByVisitaId(int visitaId);
 
     List<Incidente> findByFecha(String fecha);
 

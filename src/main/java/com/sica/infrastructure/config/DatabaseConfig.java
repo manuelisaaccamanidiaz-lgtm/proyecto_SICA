@@ -1,13 +1,14 @@
 package com.sica.infrastructure.config;
 
-import org.apache.commons.dbcp2.BasicDataSource;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.Properties;
+
+import org.apache.commons.dbcp2.BasicDataSource;
 
 /**
  * Configuración de conexión a la base de datos MySQL.
@@ -97,8 +98,7 @@ public class DatabaseConfig {
         ds.setMaxTotal(Integer.parseInt(props.getProperty("db.pool.maxTotal", "20")));
         ds.setMaxIdle(Integer.parseInt(props.getProperty("db.pool.maxIdle", "10")));
         ds.setMinIdle(Integer.parseInt(props.getProperty("db.pool.minIdle", "5")));
-        ds.setMaxWaitMillis(Long.parseLong(props.getProperty("db.pool.maxWaitMillis", "10000")));
-
+        ds.setMaxWait(Duration.ofMillis(Long.parseLong(props.getProperty("db.pool.maxWaitMillis", "10000"))));
         return ds;
     }
 }

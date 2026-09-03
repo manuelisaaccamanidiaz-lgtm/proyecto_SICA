@@ -12,7 +12,7 @@ public interface PersonaRepository {
 
     Persona findById(int id);
 
-    Persona findByDocumento(String documento);
+    Persona findByDocumentoIdentidad(String documentoIdentidad);
 
     List<Persona> findAll();
 
