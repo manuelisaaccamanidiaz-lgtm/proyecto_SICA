@@ -168,3 +168,7 @@ que tomó la decisión.
 ## Licencia
 
 Proyecto interno de uso privado.
+
+## Autor
+
+Manuel Isaac Camaño Diaz
