@@ -5,13 +5,13 @@ import com.sica.application.AutorizacionService;
 import com.sica.domain.*;
 import com.sica.domain.port.*;
 
-import java.time.LocalDateTime;
-
 /**
  * Flujo 3: Trabajador con Carnet Olvidado.
  * El trabajador es conocido en el sistema (tipo TRABAJADOR) pero no presenta carnet.
  * Se verifica su identidad por documento, se confirma que este activo,
- * y se le permite el paso.
+ * y se crea una solicitud de visita con estado "Pendiente de Aprobacion".
+ * La fecha de entrada NO se registra y visita_aprobada_por queda NULL.
+ * Un funcionario debe aprobar o rechazar la solicitud.
  *
  * Requiere permiso: registrar_visita
  */
@@ -82,7 +82,7 @@ public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
                 }
             }
 
-            // 5. Verificar que no tenga visita en curso
+            // 5. Verificar que no tenga visita en curso o pendiente
             var enCurso = visitaRepository.findEnCurso();
             for (Visita v : enCurso) {
                 if (v.getPersonaId() == persona.getId()) {
@@ -92,33 +92,49 @@ public class TrabajadorCarnetOlvidadoStrategy implements FlujoAccesoStrategy {
                 }
             }
 
-            // 6. Obtener estado "Dentro"
-            var estadoDentro = visitaEstadoRepository.findByNombreEstado("Dentro");
-            if (estadoDentro == null) {
-                return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catalogo.");
+            // Verificar que no tenga visita pendiente de aprobacion
+            var pendientes = visitaEstadoRepository.findByNombreEstado("Pendiente de Aprobacion");
+            if (pendientes != null) {
+                var visitasPendientes = visitaRepository.findByEstadoVisitaId(pendientes.getId());
+                for (Visita v : visitasPendientes) {
+                    if (v.getPersonaId() == persona.getId()) {
+                        return ResultadoAcceso.fallo(
+                            "El trabajador '" + persona.getNombre()
+                            + "' ya tiene una solicitud pendiente de aprobacion (Visita ID: " + v.getId() + ").");
+                    }
+                }
             }
 
-            // 7. Registrar la visita (sin placa, sin carnet, solo documento verificado)
+            // 6. Obtener estado "Pendiente de Aprobacion"
+            var estadoPendiente = visitaEstadoRepository.findByNombreEstado("Pendiente de Aprobacion");
+            if (estadoPendiente == null) {
+                return ResultadoAcceso.fallo("Error: Estado 'Pendiente de Aprobacion' no encontrado en catalogo.");
+            }
+
+            // 7. Crear la solicitud de visita pendiente (sin fecha_entrada, sin aprobador)
             Visita visita = new Visita();
             visita.setPersonaId(persona.getId());
-            visita.setFechaEntrada(LocalDateTime.now());
+            visita.setFechaEntrada(null);        // NO se registra aun
             visita.setFechaSalida(null);
-            visita.setEstadoVisitaId(estadoDentro.getId());
+            visita.setEstadoVisitaId(estadoPendiente.getId());
             visita.setVehiculoPlaca(solicitud.getVehiculoPlaca());
-            visita.setVisitaAprobadaPor(solicitud.getUsuarioId());
+            visita.setVisitaAprobadaPor(null);    // NULL hasta que funcione apruebe
 
             Visita guardada = visitaRepository.guardar(visita);
 
             // 8. Auditar
             auditoriaService.registrar(solicitud.getUsuarioId(),
-                    "ACCESO_TRABAJADOR_CARNET_OLVIDADO", "visitas", guardada.getId(),
-                    "Trabajador sin carnet verificado por documento: " + persona.getNombre()
+                    "ACCESO_TRABAJADOR_CARNET_OLVIDADO_PENDIENTE", "visitas", guardada.getId(),
+                    "Solicitud de acceso creada para trabajador sin carnet: " + persona.getNombre()
                     + " | Doc: " + persona.getDocumentoIdentidad()
-                    + " | Visita ID: " + guardada.getId());
+                    + " | Visita ID: " + guardada.getId()
+                    + " | Estado: Pendiente de Aprobacion");
 
             return ResultadoAcceso.exito(
-                "Trabajador '" + persona.getNombre()
-                + "' verificado por documento y ingresado. Visita ID: " + guardada.getId())
+                "Solicitud de acceso creada para trabajador '" + persona.getNombre()
+                + "'. Visita ID: " + guardada.getId()
+                + ". Estado: Pendiente de Aprobacion."
+                + " Un funcionario debe aprobar o rechazar la solicitud.")
                 .visitaId(guardada.getId())
                 .personaId(persona.getId());
 

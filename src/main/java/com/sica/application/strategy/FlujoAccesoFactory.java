@@ -9,7 +9,6 @@ import com.sica.domain.port.VisitaEstadoRepository;
 import com.sica.domain.port.VisitaRepository;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -20,7 +19,7 @@ import java.util.List;
  * <ol>
  *   <li>Si la persona NO existe por documento &rarr; {@code InvitadoNoAnunciado}</li>
  *   <li>Si existe y tiene una visita con estado "Dentro" &rarr; {@code SalidaOlvidada}</li>
- *   <li>Si existe y tiene una visita "Aprobado" para hoy &rarr; {@code InvitadoPreRegistrado}</li>
+ *   <li>Si existe y tiene una visita "Aprobado" (pendiente de ingreso) &rarr; {@code InvitadoPreRegistrado}</li>
  *   <li>Si existe, es tipo TRABAJADOR y no cae en los casos anteriores &rarr; {@code TrabajadorCarnetOlvidado}</li>
  *   <li>Si existe, es tipo INVITADO y no cae en los casos anteriores &rarr; {@code null} (caso ambiguo)</li>
  * </ol>
@@ -72,12 +71,12 @@ public class FlujoAccesoFactory {
         // 1. Buscar la persona por documento
         Persona persona = personaRepository.findByDocumentoIdentidad(documentoIdentidad.trim());
 
-        // 1a. No existe → InvitadoNoAnunciado
+        // 1a. No existe -> InvitadoNoAnunciado
         if (persona == null) {
             return invitadoNoAnunciado;
         }
 
-        // 2. Verificar si tiene visita en curso con estado "Dentro" → SalidaOlvidada
+        // 2. Verificar si tiene visita en curso con estado "Dentro" -> SalidaOlvidada
         VisitaEstado estadoDentro = visitaEstadoRepository.findByNombreEstado("Dentro");
         if (estadoDentro != null) {
             List<Visita> visitas = visitaRepository.findByPersonaId(persona.getId());
@@ -88,26 +87,23 @@ public class FlujoAccesoFactory {
             }
         }
 
-        // 3. Verificar si tiene una visita "Aprobado" para hoy → InvitadoPreRegistrado
+        // 3. Verificar si tiene una visita "Aprobado" (pendiente de ingreso) -> InvitadoPreRegistrado
         VisitaEstado estadoAprobado = visitaEstadoRepository.findByNombreEstado("Aprobado");
         if (estadoAprobado != null) {
-            LocalDate hoy = LocalDate.now();
             List<Visita> visitas = visitaRepository.findByPersonaId(persona.getId());
-            boolean tieneAprobadoHoy = visitas.stream()
-                    .filter(v -> v.getEstadoVisitaId() == estadoAprobado.getId())
-                    .filter(v -> v.getFechaEntrada() != null)
-                    .anyMatch(v -> v.getFechaEntrada().toLocalDate().equals(hoy));
-            if (tieneAprobadoHoy) {
+            boolean tieneAprobado = visitas.stream()
+                    .anyMatch(v -> v.getEstadoVisitaId() == estadoAprobado.getId());
+            if (tieneAprobado) {
                 return invitadoPreRegistrado;
             }
         }
 
-        // 4. Es TRABAJADOR y no cae en casos anteriores → TrabajadorCarnetOlvidado
+        // 4. Es TRABAJADOR y no cae en casos anteriores -> TrabajadorCarnetOlvidado
         if (persona.getTipoPersona() == TipoPersona.TRABAJADOR) {
             return trabajadorCarnetOlvidado;
         }
 
-        // 5. Es INVITADO y no cae en ningun caso → caso ambiguo
+        // 5. Es INVITADO y no cae en ningun caso -> caso ambiguo
         return null;
     }
 
@@ -145,17 +141,14 @@ public class FlujoAccesoFactory {
             }
         }
 
-        // Verificar estado Aprobado hoy
+        // Verificar estado Aprobado (pendiente de ingreso)
         VisitaEstado estadoAprobado = visitaEstadoRepository.findByNombreEstado("Aprobado");
         if (estadoAprobado != null) {
-            LocalDate hoy = LocalDate.now();
             List<Visita> visitas = visitaRepository.findByPersonaId(persona.getId());
-            boolean tieneAprobadoHoy = visitas.stream()
-                    .filter(v -> v.getEstadoVisitaId() == estadoAprobado.getId())
-                    .filter(v -> v.getFechaEntrada() != null)
-                    .anyMatch(v -> v.getFechaEntrada().toLocalDate().equals(hoy));
-            if (tieneAprobadoHoy) {
-                sb.append("Tiene visita APROBADA para hoy -> Invitado Pre-Registrado.");
+            boolean tieneAprobado = visitas.stream()
+                    .anyMatch(v -> v.getEstadoVisitaId() == estadoAprobado.getId());
+            if (tieneAprobado) {
+                sb.append("Tiene visita APROBADA (pendiente de ingreso) -> Invitado Pre-Registrado.");
                 return sb.toString();
             }
         }

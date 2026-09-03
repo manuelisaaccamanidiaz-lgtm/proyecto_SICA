@@ -8,12 +8,18 @@ import com.sica.domain.TipoPersona;
 import com.sica.domain.port.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Flujo 1: Invitado Pre-Registrado.
- * La persona ya existe en la BD como tipo INVITADO.
- * Se verifica su estado de acceso, se busca si ya tiene visita en curso,
- * y se le registra la entrada si todo esta en orden.
+ *
+ * Maneja dos escenarios:
+ * <ol>
+ *   <li>La persona tiene una visita con estado "Aprobado" (aprobada por un funcionario)
+ *       &rarr; se registra la entrada (fecha_entrada = ahora, estado = "Dentro").</li>
+ *   <li>La persona es un invitado conocido sin visita aprobada
+ *       &rarr; se crea una nueva visita directamente como "Dentro" (pre-registro clasico).</li>
+ * </ol>
  *
  * Requiere permiso: registrar_visita
  */
@@ -88,13 +94,41 @@ public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
                 }
             }
 
-            // 5. Obtener estado "Dentro" del catalogo
+            // 5. Obtener estados del catalogo
+            var estadoAprobado = visitaEstadoRepository.findByNombreEstado("Aprobado");
             var estadoDentro = visitaEstadoRepository.findByNombreEstado("Dentro");
             if (estadoDentro == null) {
                 return ResultadoAcceso.fallo("Error: Estado 'Dentro' no encontrado en catalogo.");
             }
 
-            // 6. Crear la visita
+            // 6. Verificar si tiene una visita "Aprobado" -> registrar entrada
+            if (estadoAprobado != null) {
+                List<Visita> visitasPersona = visitaRepository.findByPersonaId(persona.getId());
+                for (Visita v : visitasPersona) {
+                    if (v.getEstadoVisitaId() == estadoAprobado.getId()) {
+                        // Encontramos una visita aprobada: registrar la entrada
+                        v.setFechaEntrada(LocalDateTime.now());
+                        v.setEstadoVisitaId(estadoDentro.getId());
+                        v.setVisitaAprobadaPor(solicitud.getUsuarioId());
+                        visitaRepository.actualizar(v);
+
+                        auditoriaService.registrar(solicitud.getUsuarioId(),
+                                "ACCESO_INVITADO_PRE_REGISTRADO_APROBADO", "visitas", v.getId(),
+                                "Entrada registrada para invitado pre-aprobado: " + persona.getNombre()
+                                + " | Doc: " + persona.getDocumentoIdentidad()
+                                + " | Visita ID: " + v.getId()
+                                + " | Aprobado originalmente por usuario ID: " + v.getVisitaAprobadaPor());
+
+                        return ResultadoAcceso.exito(
+                            "Invitado pre-aprobado '" + persona.getNombre()
+                            + "' ingresado correctamente. Visita ID: " + v.getId())
+                            .visitaId(v.getId())
+                            .personaId(persona.getId());
+                    }
+                }
+            }
+
+            // 7. No tiene visita aprobada: crear visita directamente como "Dentro" (pre-registro clasico)
             Visita visita = new Visita();
             visita.setPersonaId(persona.getId());
             visita.setFechaEntrada(LocalDateTime.now());
@@ -105,7 +139,7 @@ public class InvitadoPreRegistradoStrategy implements FlujoAccesoStrategy {
 
             Visita guardada = visitaRepository.guardar(visita);
 
-            // 7. Auditar
+            // 8. Auditar
             auditoriaService.registrar(solicitud.getUsuarioId(),
                     "ACCESO_INVITADO_PRE_REGISTRADO", "visitas", guardada.getId(),
                     "Invitado pre-registrado: " + persona.getNombre()

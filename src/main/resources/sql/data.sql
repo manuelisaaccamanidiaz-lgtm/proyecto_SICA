@@ -26,7 +26,8 @@ INSERT INTO permisos (nombre_permiso, descripcion) VALUES
     ('gestionar_roles',           'Administrar roles y sus permisos'),
     ('gestionar_permisos',        'Administrar permisos del sistema'),
     ('gestionar_empresas',        'Crear, editar y eliminar empresas'),
-    ('gestionar_personas',        'Crear, editar y eliminar personas registradas');
+    ('gestionar_personas',        'Crear, editar y eliminar personas registradas'),
+    ('aprobar_visita',            'Aprobar o rechazar solicitudes de acceso pendientes');
 
 -- ============ ROL_PERMISOS ============
 -- Superusuario: TODOS los permisos
@@ -50,7 +51,7 @@ SELECT 3, id FROM permisos WHERE nombre_permiso IN (
 -- Funcionario de Empresa: solo registrar visitas propias
 INSERT INTO rol_permisos (rol_id, permiso_id)
 SELECT 4, id FROM permisos WHERE nombre_permiso IN (
-    'acceder_sistema', 'registrar_visita'
+    'acceder_sistema', 'registrar_visita', 'aprobar_visita'
 );
 
 -- ============ ESTADOS DE ACCESO DE PERSONA ============

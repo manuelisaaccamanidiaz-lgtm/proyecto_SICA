@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import com.sica.application.AprobacionVisitaUseCase;
+import com.sica.application.AprobacionVisitaUseCaseImpl;
 import com.sica.application.AuditoriaService;
 import com.sica.application.AutorizacionService;
 import com.sica.application.IncidenteUseCase;
@@ -58,6 +60,9 @@ public class Main {
                                  personaEstadoRepo, auditoriaService, autorizacionService);
     private static final ReporteUseCase reporteUseCase =
         new ReporteUseCaseImpl(visitaRepo, personaRepo, incidenteRepo, visitaEstadoRepo);
+    private static final AprobacionVisitaUseCase aprobacionVisitaUseCase =
+        new AprobacionVisitaUseCaseImpl(visitaRepo, visitaEstadoRepo, personaRepo,
+                                         auditoriaService, autorizacionService);
 
     private static final InvitadoPreRegistradoStrategy invitadoPreRegistrado =
         new InvitadoPreRegistradoStrategy(personaRepo, visitaRepo, visitaEstadoRepo,
@@ -100,13 +105,14 @@ public class Main {
                 case 2 -> ejecutarFlujo(1);
                 case 3 -> ejecutarFlujo(2);
                 case 4 -> ejecutarFlujo(3);
+                case 11 -> ejecutarFlujoAutomatico();
                 case 5 -> login();
                 case 6 -> probarAutorizacion();
                 case 7 -> registrarIncidente();
+                case 12 -> gestionarSolicitudesAcceso();
                 case 8 -> verPersonasDentro();
                 case 9 -> verIncidentesPorFecha();
                 case 10 -> verVisitasPorEstado();
-                case 11 -> ejecutarFlujoAutomatico();
                 case 0 -> { ejecutando = false; System.out.println("Hasta luego!"); }
                 default -> System.out.println("Opcion no valida.");
             }
@@ -140,9 +146,10 @@ public class Main {
         System.out.println("  --- Deteccion Automatica ---");
         System.out.println("  11. Detectar flujo por documento");
         System.out.println("  --- Seguridad ---");
-        System.out.println("  5. Cambiar de usuario");
+        System.out.println("  5. Cambiar usuario / Cerrar sesion");
         System.out.println("  6. Probar autorizacion (RBAC)");
         System.out.println("  7. Registrar incidente");
+        System.out.println("  12. Solicitudes de Acceso (Aprobar/Rechazar)");
         System.out.println("  --- Reportes ---");
         System.out.println("  8. Personas dentro del complejo");
         System.out.println("  9. Incidentes por rango de fechas");
@@ -158,9 +165,6 @@ public class Main {
         System.out.print("  Documento de identidad: ");
         String doc = scanner.nextLine().trim();
         if (!doc.isEmpty()) solicitud.documentoIdentidad(doc);
-        System.out.print("  ID de persona (0 si no sabe): ");
-        int personaId = leerEntero("");
-        if (personaId > 0) solicitud.personaId(personaId);
         if (indice == 1) {
             System.out.print("  Nombre del invitado: ");
             solicitud.nombreInvitado(scanner.nextLine().trim());
@@ -214,6 +218,52 @@ public class Main {
 
         ResultadoAcceso resultado = estrategia.procesar(solicitud);
         System.out.println("\n" + resultado);
+    }
+
+    private static void gestionarSolicitudesAcceso() {
+        System.out.println("\n> Solicitudes de Acceso Pendientes");
+        if (!autorizacionService.tienePermiso(usuarioActual.getId(), "aprobar_visita")) {
+            System.out.println("ACCESO DENEGADO: No tiene permiso 'aprobar_visita'.");
+            return;
+        }
+
+        List<Visita> pendientes = aprobacionVisitaUseCase.consultarSolicitudesPendientes();
+        if (pendientes.isEmpty()) {
+            System.out.println("  No hay solicitudes pendientes de aprobacion.");
+            return;
+        }
+
+        System.out.println("  Solicitudes pendientes:");
+        for (Visita v : pendientes) {
+            Persona p = personaRepo.findById(v.getPersonaId());
+            String nombre = p != null ? p.getNombre() : "ID:" + v.getPersonaId();
+            System.out.println("  [" + v.getId() + "] " + nombre
+                + " | Persona ID: " + v.getPersonaId()
+                + " | Placa: " + (v.getVehiculoPlaca() != null ? v.getVehiculoPlaca() : "N/A"));
+        }
+        System.out.println("  Total: " + pendientes.size());
+
+        System.out.print("\n  ID de la visita a procesar (0 para volver): ");
+        int visitaId = leerEntero("");
+        if (visitaId <= 0) return;
+
+        System.out.println("  1. Aprobar");
+        System.out.println("  2. Rechazar");
+        int accion = leerEntero("  Opcion: ");
+
+        try {
+            if (accion == 1) {
+                Visita aprobada = aprobacionVisitaUseCase.aprobarVisita(visitaId, usuarioActual.getId());
+                System.out.println("  Visita ID " + aprobada.getId() + " APROBADA correctamente.");
+            } else if (accion == 2) {
+                Visita rechazada = aprobacionVisitaUseCase.rechazarVisita(visitaId, usuarioActual.getId());
+                System.out.println("  Visita ID " + rechazada.getId() + " RECHAZADA.");
+            } else {
+                System.out.println("  Opcion invalida.");
+            }
+        } catch (RuntimeException e) {
+            System.out.println("  Error: " + e.getMessage());
+        }
     }
 
     private static void probarAutorizacion() {
