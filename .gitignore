@@ -32,3 +32,5 @@ src/main/resources/jdbc.properties
 .freebuff/
 
 lib/
+
+.freebuff/
