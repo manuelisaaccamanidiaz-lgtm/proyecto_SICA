@@ -3,6 +3,8 @@ package com.sica.application;
 import com.sica.domain.Incidente;
 import com.sica.domain.Persona;
 import com.sica.domain.PersonaEstadoAcceso;
+import com.sica.domain.exception.PermisoDenegadoException;
+import com.sica.domain.exception.VisitaNoEncontradaException;
 import com.sica.domain.port.*;
 
 /**
@@ -44,15 +46,16 @@ public class IncidenteUseCaseImpl implements IncidenteUseCase {
     public Incidente registrarIncidente(int visitaId, int reportadoPorId, String descripcion) {
         // 0. Verificar permiso RBAC
         if (!autorizacionService.tienePermiso(reportadoPorId, "registrar_incidente")) {
-            throw new RuntimeException(
+            throw new PermisoDenegadoException(
                 "ACCESO DENEGADO: No tiene permiso 'registrar_incidente'. "
-                + "Contacte al administrador.");
+                + "Contacte al administrador.",
+                reportadoPorId, "registrar_incidente");
         }
 
         // 1. Validar que la visita exista
         var visita = visitaRepository.findById(visitaId);
         if (visita == null) {
-            throw new IllegalArgumentException("La visita con ID " + visitaId + " no existe.");
+            throw new VisitaNoEncontradaException("La visita con ID " + visitaId + " no existe.");
         }
 
         // 2. Registrar el incidente

@@ -1,6 +1,8 @@
 package com.sica.application;
 
 import com.sica.domain.Usuario;
+import com.sica.domain.exception.CredencialesInvalidasException;
+import com.sica.domain.exception.PermisoDenegadoException;
 import com.sica.domain.port.UsuarioRepository;
 import com.sica.infrastructure.config.PasswordUtil;
 
@@ -37,7 +39,7 @@ public class LoginUseCaseImpl implements LoginUseCase {
         if (usuario == null) {
             auditoriaService.registrar(null, "LOGIN_FALLIDO", "usuarios", 0,
                     "Usuario no encontrado: " + email);
-            throw new RuntimeException("Credenciales invalidas.");
+            throw new CredencialesInvalidasException("Credenciales invalidas.");
         }
 
         // 2. Verificar que este activo
@@ -45,7 +47,7 @@ public class LoginUseCaseImpl implements LoginUseCase {
             auditoriaService.registrar(usuario.getId(), "LOGIN_FALLIDO",
                     "usuarios", usuario.getId(),
                     "Usuario desactivado: " + email);
-            throw new RuntimeException("Credenciales invalidas.");
+            throw new CredencialesInvalidasException("Credenciales invalidas.");
         }
 
         // 3. Verificar contrasena
@@ -53,7 +55,7 @@ public class LoginUseCaseImpl implements LoginUseCase {
             auditoriaService.registrar(usuario.getId(), "LOGIN_FALLIDO",
                     "usuarios", usuario.getId(),
                     "Contrasena incorrecta para: " + email);
-            throw new RuntimeException("Credenciales invalidas.");
+            throw new CredencialesInvalidasException("Credenciales invalidas.");
         }
 
         // 4. Verificar permiso RBAC "acceder_sistema"
@@ -61,7 +63,9 @@ public class LoginUseCaseImpl implements LoginUseCase {
             auditoriaService.registrar(usuario.getId(), "LOGIN_FALLIDO",
                     "usuarios", usuario.getId(),
                     "Sin permiso 'acceder_sistema': " + email);
-            throw new RuntimeException("No tiene permiso para acceder al sistema.");
+            throw new PermisoDenegadoException(
+                "No tiene permiso para acceder al sistema.",
+                usuario.getId(), "acceder_sistema");
         }
 
         // 5. Login exitoso
