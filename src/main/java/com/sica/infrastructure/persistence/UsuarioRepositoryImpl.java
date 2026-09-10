@@ -85,7 +85,7 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
         }
     }
 
-    @Override
+/*     @Override
     public int findIdEmpresa() {
         String sql = "SELECT em.id FROM usuarios u JOIN visitas vi ON vi.visita_aprobada_por = u.id JOIN personas ORDER BY id";
         try (Connection conn = dbConfig.getConnection();
@@ -96,7 +96,7 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
         } catch (SQLException e) {
             throw new RuntimeException("Error al listar usuarios: " + e.getMessage(), e);
         }
-    }
+    } */
 
     @Override
     public void actualizar(Usuario usuario) {

@@ -17,8 +17,8 @@ public interface UsuarioRepository {
 
     List<Usuario> findAll();
     
-    int findIdEmpresa ();
-
+/*     int findIdEmpresa ();
+ */
     void actualizar(Usuario usuario);
 
     void eliminar(int id);
