@@ -37,9 +37,9 @@ public class ReporteUseCaseImpl implements ReporteUseCase {
     }
 
     @Override
-    public List<Persona> personasDentroDelComplejo() {
+    public List<Persona> personasDentroDelComplejo(int empresaId) {
         // 1. Trae todas las visitas en curso
-        List<Visita> enCurso = visitaRepository.findEnCurso();
+        List<Visita> enCurso = visitaRepository.findEnCursoPorEmpresa(empresaId);
 
         // 2. Extrae los IDs unicos de personas, una sola vez
         Set<Integer> personaIds = enCurso.stream()

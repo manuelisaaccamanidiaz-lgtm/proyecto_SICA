@@ -20,7 +20,7 @@ public interface ReporteUseCase {
      *
      * @return lista de personas dentro del complejo
      */
-    List<Persona> personasDentroDelComplejo();
+    List<Persona> personasDentroDelComplejo(int empresaId);
 
     /**
      * Retorna incidentes ocurridos en un rango de fechas.

@@ -50,41 +50,40 @@ public class Main {
     private static final IncidenteRepositoryImpl incidenteRepo = new IncidenteRepositoryImpl();
 
     private static final AuditoriaService auditoriaService = new AuditoriaService(auditoriaRepo);
-    private static final AutorizacionService autorizacionService =
-        new AutorizacionService(usuarioRepo, permisoRepo, auditoriaService);
+    private static final AutorizacionService autorizacionService = new AutorizacionService(usuarioRepo, permisoRepo,
+            auditoriaService);
 
-    private static final LoginUseCase loginUseCase =
-        new LoginUseCaseImpl(usuarioRepo, autorizacionService, auditoriaService);
-    private static final IncidenteUseCase incidenteUseCase =
-        new IncidenteUseCaseImpl(incidenteRepo, visitaRepo, personaRepo,
-                                 personaEstadoRepo, auditoriaService, autorizacionService);
-    private static final ReporteUseCase reporteUseCase =
-        new ReporteUseCaseImpl(visitaRepo, personaRepo, incidenteRepo, visitaEstadoRepo);
-    private static final AprobacionVisitaUseCase aprobacionVisitaUseCase =
-        new AprobacionVisitaUseCaseImpl(visitaRepo, visitaEstadoRepo, personaRepo,
-                                         auditoriaService, autorizacionService);
+    private static final LoginUseCase loginUseCase = new LoginUseCaseImpl(usuarioRepo, autorizacionService,
+            auditoriaService);
+    private static final IncidenteUseCase incidenteUseCase = new IncidenteUseCaseImpl(incidenteRepo, visitaRepo,
+            personaRepo,
+            personaEstadoRepo, auditoriaService, autorizacionService);
+    private static final ReporteUseCase reporteUseCase = new ReporteUseCaseImpl(visitaRepo, personaRepo, incidenteRepo,
+            visitaEstadoRepo);
+    private static final AprobacionVisitaUseCase aprobacionVisitaUseCase = new AprobacionVisitaUseCaseImpl(visitaRepo,
+            visitaEstadoRepo, personaRepo,
+            auditoriaService, autorizacionService);
 
-    private static final InvitadoPreRegistradoStrategy invitadoPreRegistrado =
-        new InvitadoPreRegistradoStrategy(personaRepo, visitaRepo, visitaEstadoRepo,
-                                          personaEstadoRepo, auditoriaService, autorizacionService);
-    private static final InvitadoNoAnunciadoStrategy invitadoNoAnunciado =
-        new InvitadoNoAnunciadoStrategy(personaRepo, visitaRepo, visitaEstadoRepo,
-                                        personaEstadoRepo, auditoriaService, autorizacionService);
-    private static final TrabajadorCarnetOlvidadoStrategy trabajadorCarnetOlvidado =
-        new TrabajadorCarnetOlvidadoStrategy(personaRepo, visitaRepo, visitaEstadoRepo,
-                                             personaEstadoRepo, auditoriaService, autorizacionService);
-    private static final SalidaOlvidadaStrategy salidaOlvidada =
-        new SalidaOlvidadaStrategy(personaRepo, visitaRepo, visitaEstadoRepo,
-                                   auditoriaService, autorizacionService);
+    private static final InvitadoPreRegistradoStrategy invitadoPreRegistrado = new InvitadoPreRegistradoStrategy(
+            personaRepo, visitaRepo, visitaEstadoRepo,
+            personaEstadoRepo, auditoriaService, autorizacionService);
+    private static final InvitadoNoAnunciadoStrategy invitadoNoAnunciado = new InvitadoNoAnunciadoStrategy(personaRepo,
+            visitaRepo, visitaEstadoRepo,
+            personaEstadoRepo, auditoriaService, autorizacionService);
+    private static final TrabajadorCarnetOlvidadoStrategy trabajadorCarnetOlvidado = new TrabajadorCarnetOlvidadoStrategy(
+            personaRepo, visitaRepo, visitaEstadoRepo,
+            personaEstadoRepo, auditoriaService, autorizacionService);
+    private static final SalidaOlvidadaStrategy salidaOlvidada = new SalidaOlvidadaStrategy(personaRepo, visitaRepo,
+            visitaEstadoRepo,
+            auditoriaService, autorizacionService);
 
     private static final FlujoAccesoStrategy[] estrategias = {
-        invitadoPreRegistrado, invitadoNoAnunciado, trabajadorCarnetOlvidado, salidaOlvidada
+            invitadoPreRegistrado, invitadoNoAnunciado, trabajadorCarnetOlvidado, salidaOlvidada
     };
 
-    private static final FlujoAccesoFactory factory =
-        new FlujoAccesoFactory(personaRepo, visitaRepo, visitaEstadoRepo,
-                               invitadoPreRegistrado, invitadoNoAnunciado,
-                               trabajadorCarnetOlvidado, salidaOlvidada);
+    private static final FlujoAccesoFactory factory = new FlujoAccesoFactory(personaRepo, visitaRepo, visitaEstadoRepo,
+            invitadoPreRegistrado, invitadoNoAnunciado,
+            trabajadorCarnetOlvidado, salidaOlvidada);
 
     public static void main(String[] args) {
         System.out.println("=== SICA - Sistema de Control de Acceso ===\n");
@@ -95,7 +94,8 @@ public class Main {
             System.out.println("No se pudo conectar.");
             return;
         }
-        if (!login()) return;
+        if (!login())
+            return;
         boolean ejecutando = true;
         while (ejecutando) {
             mostrarMenuPrincipal();
@@ -113,7 +113,10 @@ public class Main {
                 case 8 -> verPersonasDentro();
                 case 9 -> verIncidentesPorFecha();
                 case 10 -> verVisitasPorEstado();
-                case 0 -> { ejecutando = false; System.out.println("Hasta luego!"); }
+                case 0 -> {
+                    ejecutando = false;
+                    System.out.println("Hasta luego!");
+                }
                 default -> System.out.println("Opcion no valida.");
             }
         }
@@ -164,14 +167,16 @@ public class Main {
         SolicitudAcceso solicitud = new SolicitudAcceso().usuarioId(usuarioActual.getId());
         System.out.print("  Documento de identidad: ");
         String doc = scanner.nextLine().trim();
-        if (!doc.isEmpty()) solicitud.documentoIdentidad(doc);
+        if (!doc.isEmpty())
+            solicitud.documentoIdentidad(doc);
         if (indice == 1) {
             System.out.print("  Nombre del invitado: ");
             solicitud.nombreInvitado(scanner.nextLine().trim());
         }
         System.out.print("  Placa vehiculo (vacio si no aplica): ");
         String placa = scanner.nextLine().trim();
-        if (!placa.isEmpty()) solicitud.vehiculoPlaca(placa);
+        if (!placa.isEmpty())
+            solicitud.vehiculoPlaca(placa);
         ResultadoAcceso resultado = estrategia.procesar(solicitud);
         System.out.println("\n" + resultado);
     }
@@ -210,11 +215,13 @@ public class Main {
         if (estrategia == invitadoNoAnunciado) {
             System.out.print("  Nombre del invitado (si es nuevo): ");
             String nombre = scanner.nextLine().trim();
-            if (!nombre.isEmpty()) solicitud.nombreInvitado(nombre);
+            if (!nombre.isEmpty())
+                solicitud.nombreInvitado(nombre);
         }
         System.out.print("  Placa vehiculo (vacio si no aplica): ");
         String placa = scanner.nextLine().trim();
-        if (!placa.isEmpty()) solicitud.vehiculoPlaca(placa);
+        if (!placa.isEmpty())
+            solicitud.vehiculoPlaca(placa);
 
         ResultadoAcceso resultado = estrategia.procesar(solicitud);
         System.out.println("\n" + resultado);
@@ -238,14 +245,15 @@ public class Main {
             Persona p = personaRepo.findById(v.getPersonaId());
             String nombre = p != null ? p.getNombre() : "ID:" + v.getPersonaId();
             System.out.println("  [" + v.getId() + "] " + nombre
-                + " | Persona ID: " + v.getPersonaId()
-                + " | Placa: " + (v.getVehiculoPlaca() != null ? v.getVehiculoPlaca() : "N/A"));
+                    + " | Persona ID: " + v.getPersonaId()
+                    + " | Placa: " + (v.getVehiculoPlaca() != null ? v.getVehiculoPlaca() : "N/A"));
         }
         System.out.println("  Total: " + pendientes.size());
 
         System.out.print("\n  ID de la visita a procesar (0 para volver): ");
         int visitaId = leerEntero("");
-        if (visitaId <= 0) return;
+        if (visitaId <= 0)
+            return;
 
         System.out.println("  1. Aprobar");
         System.out.println("  2. Rechazar");
@@ -270,10 +278,16 @@ public class Main {
         System.out.println("\n> Prueba de autorizacion RBAC");
         System.out.print("  ID del usuario a verificar: ");
         int userId = leerEntero("");
-        if (userId <= 0) { System.out.println("ID invalido."); return; }
+        if (userId <= 0) {
+            System.out.println("ID invalido.");
+            return;
+        }
         System.out.print("  Nombre del permiso a verificar: ");
         String permiso = scanner.nextLine().trim();
-        if (permiso.isEmpty()) { System.out.println("Debe especificar un permiso."); return; }
+        if (permiso.isEmpty()) {
+            System.out.println("Debe especificar un permiso.");
+            return;
+        }
         boolean tiene = autorizacionService.tienePermiso(userId, permiso);
         if (tiene) {
             System.out.println("El usuario " + userId + " TIENE el permiso '" + permiso + "'.");
@@ -287,25 +301,42 @@ public class Main {
         System.out.println("\n> Registrar incidente de seguridad");
         System.out.print("  ID de la visita: ");
         int visitaId = leerEntero("");
-        if (visitaId <= 0) { System.out.println("ID de visita invalido."); return; }
+        if (visitaId <= 0) {
+            System.out.println("ID de visita invalido.");
+            return;
+        }
         System.out.print("  Descripcion del incidente: ");
         String descripcion = scanner.nextLine().trim();
-        if (descripcion.isEmpty()) { System.out.println("La descripcion es obligatoria."); return; }
+        if (descripcion.isEmpty()) {
+            System.out.println("La descripcion es obligatoria.");
+            return;
+        }
         try {
             Incidente incidente = incidenteUseCase.registrarIncidente(visitaId, usuarioActual.getId(), descripcion);
             System.out.println("Incidente registrado. ID: " + incidente.getId());
             System.out.println("   La persona afectada ha sido bloqueada (Con Prohibicion de Ingreso).");
-        } catch (RuntimeException e) { System.out.println(e.getMessage()); }
+        } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private static void verPersonasDentro() {
-        System.out.println("\n> Personas actualmente dentro del complejo:");
-        List<Persona> dentro = reporteUseCase.personasDentroDelComplejo();
-        if (dentro.isEmpty()) { System.out.println("  (No hay personas dentro)"); return; }
-        for (Persona p : dentro) {
-            System.out.println("  * " + p.getNombre() + " | Doc: " + p.getDocumentoIdentidad() + " | Tipo: " + p.getTipoPersona());
+        System.out.println("ingrese el ide de la empresa:");
+        try (Scanner sc = new Scanner(System.in)) {
+            int empresaId = sc.nextInt();
+            System.out.println("\n> Personas actualmente dentro del complejo:");
+            List<Persona> dentro = reporteUseCase.personasDentroDelComplejo(empresaId);
+            if (dentro.isEmpty()) {
+                System.out.println("  (No hay personas dentro)");
+                return;
+            }
+            for (Persona p : dentro) {
+                System.out.println("  * " + p.getNombre() + " | Doc: " + p.getDocumentoIdentidad() + " | Tipo: "
+                        + p.getTipoPersona());
+            }
+            System.out.println("  Total: " + dentro.size());
         }
-        System.out.println("  Total: " + dentro.size());
+
     }
 
     private static void verIncidentesPorFecha() {
@@ -316,29 +347,42 @@ public class Main {
         String fin = scanner.nextLine().trim();
         try {
             List<Incidente> incidentes = reporteUseCase.incidentesPorRangoFechas(inicio, fin);
-            if (incidentes.isEmpty()) { System.out.println("  (No se encontraron incidentes)"); return; }
+            if (incidentes.isEmpty()) {
+                System.out.println("  (No se encontraron incidentes)");
+                return;
+            }
             for (Incidente i : incidentes) {
-                System.out.println("  * ID: " + i.getId() + " | Fecha: " + i.getFecha() + " | Visita: " + i.getVisitaId() + " | Desc: " + i.getDescripcion());
+                System.out.println("  * ID: " + i.getId() + " | Fecha: " + i.getFecha() + " | Visita: "
+                        + i.getVisitaId() + " | Desc: " + i.getDescripcion());
             }
             System.out.println("  Total: " + incidentes.size());
-        } catch (Exception e) { System.out.println("Formato de fecha invalido: " + e.getMessage()); }
+        } catch (Exception e) {
+            System.out.println("Formato de fecha invalido: " + e.getMessage());
+        }
     }
 
     private static void verVisitasPorEstado() {
         System.out.println("\n> Visitas agrupadas por estado:");
         Map<String, List<Visita>> agrupadas = reporteUseCase.visitasAgrupadasPorEstado();
-        if (agrupadas.isEmpty()) { System.out.println("  (No hay visitas registradas)"); return; }
+        if (agrupadas.isEmpty()) {
+            System.out.println("  (No hay visitas registradas)");
+            return;
+        }
         for (Map.Entry<String, List<Visita>> entry : agrupadas.entrySet()) {
             System.out.println("  [" + entry.getKey() + "] - " + entry.getValue().size() + " visitas:");
             for (Visita v : entry.getValue()) {
-                System.out.println("    * ID: " + v.getId() + " | Persona: " + v.getPersonaId() + " | Entrada: " + v.getFechaEntrada());
+                System.out.println("    * ID: " + v.getId() + " | Persona: " + v.getPersonaId() + " | Entrada: "
+                        + v.getFechaEntrada());
             }
         }
     }
 
     private static int leerEntero(String prompt) {
         System.out.print(prompt);
-        try { return Integer.parseInt(scanner.nextLine().trim()); }
-        catch (NumberFormatException e) { return 0; }
+        try {
+            return Integer.parseInt(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

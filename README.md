@@ -165,6 +165,14 @@ Funcionario de Empresa) entra a la sección **"Aprobar Acceso"**, donde puede:
 Cada aprobación/rechazo queda registrado en la bitácora de auditoría con el ID del funcionario
 que tomó la decisión.
 
+## Ver personas dentro del complejo
+
+segun el funcionario lo desee, puede revisar la spersonas dentro del complejo que pertenezcan a una empresa en especifico
+
+al precionar la funcion, el sistema hace una consulta a la base de datos buscando a las personas que cumplan con el id de la empresa ingresada y que no se les haya registrado una fecha de salida. al final se muestra con un mensaje donde se imprime el nombre de las personas, su numero de identificacion y el tipo de personas, si es un trabajador o un invitado.
+
+esto facilitara mucho el trabajo de los administrativos al ayudar con la coordinación de reuniones imprevistas, la gestión de emergencias o simplemente para tener un control del personal presente.
+
 ## Licencia
 
 Proyecto interno de uso privado.

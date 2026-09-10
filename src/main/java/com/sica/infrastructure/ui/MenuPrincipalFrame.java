@@ -197,10 +197,12 @@ public class MenuPrincipalFrame extends JFrame {
         }
     }
     private void verPersonasDentro() {
-        List<Persona> dentro = reporteUseCase.personasDentroDelComplejo();
+        String empresaIdString = JOptionPane.showInputDialog(this, "Id de la empresa", "Buscar personas por empresa", JOptionPane.QUESTION_MESSAGE);
+        int empresaId = Integer.parseInt(empresaIdString.trim());
+        List<Persona> dentro = reporteUseCase.personasDentroDelComplejo(empresaId);
         if (dentro.isEmpty()) { JOptionPane.showMessageDialog(this, "No hay personas dentro del complejo.", "Personas Dentro", JOptionPane.INFORMATION_MESSAGE); return; }
         StringBuilder sb = new StringBuilder("Personas dentro del complejo:\n\n");
-        for (Persona p : dentro) { sb.append("- ").append(p.getNombre()).append(" | Doc: ").append(p.getDocumentoIdentidad()).append(" | Tipo: ").append(p.getTipoPersona()).append("\n"); }
+        for (Persona p : dentro) { sb.append("- ").append(p.getNombre()).append(" | Doc: ").append(p.getDocumentoIdentidad()).append(" | Tipo: ").append(p.getTipoPersona()).append("|Fecha y hora de entrada:").append("\n"); }
         sb.append("\nTotal: ").append(dentro.size());
         JTextArea textArea = new JTextArea(sb.toString());
         textArea.setEditable(false);

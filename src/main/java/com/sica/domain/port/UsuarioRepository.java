@@ -16,6 +16,8 @@ public interface UsuarioRepository {
     Usuario findByEmail(String email);
 
     List<Usuario> findAll();
+    
+    int findIdEmpresa ();
 
     void actualizar(Usuario usuario);
 

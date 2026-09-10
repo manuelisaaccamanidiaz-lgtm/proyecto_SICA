@@ -25,4 +25,7 @@ public interface VisitaRepository {
     void actualizar(Visita visita);
 
     void eliminar(int id);
+
+    List<Visita> findEnCursoPorEmpresa(int empresaId); // visitas sin fecha_salida y el id de la empresa
+
 }

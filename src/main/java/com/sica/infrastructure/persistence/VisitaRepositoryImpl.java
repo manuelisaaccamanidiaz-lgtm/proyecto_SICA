@@ -24,10 +24,10 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public Visita guardar(Visita visita) {
         String sql = "INSERT INTO visitas (persona_id, fecha_entrada, fecha_salida, "
-                   + "estado_visita_id, vehiculo_placa, visita_aprobada_por) "
-                   + "VALUES (?, ?, ?, ?, ?, ?)";
+                + "estado_visita_id, vehiculo_placa, visita_aprobada_por) "
+                + "VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, visita.getPersonaId());
             if (visita.getFechaEntrada() != null) {
                 ps.setTimestamp(2, Timestamp.valueOf(visita.getFechaEntrada()));
@@ -49,7 +49,8 @@ public class VisitaRepositoryImpl implements VisitaRepository {
             ps.executeUpdate();
 
             try (ResultSet keys = ps.getGeneratedKeys()) {
-                if (keys.next()) visita.setId(keys.getInt(1));
+                if (keys.next())
+                    visita.setId(keys.getInt(1));
             }
             return visita;
         } catch (SQLException e) {
@@ -60,13 +61,14 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public Visita findById(int id) {
         String sql = "SELECT id, persona_id, fecha_entrada, fecha_salida, "
-                   + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
-                   + "FROM visitas WHERE id = ?";
+                + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
+                + "FROM visitas WHERE id = ?";
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapRow(rs);
+                if (rs.next())
+                    return mapRow(rs);
             }
             return null;
         } catch (SQLException e) {
@@ -77,13 +79,14 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public List<Visita> findAll() {
         String sql = "SELECT id, persona_id, fecha_entrada, fecha_salida, "
-                   + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
-                   + "FROM visitas ORDER BY fecha_entrada DESC";
+                + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
+                + "FROM visitas ORDER BY fecha_entrada DESC";
         List<Visita> visitas = new ArrayList<>();
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) visitas.add(mapRow(rs));
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ResultSet rs = ps.executeQuery()) {
+            while (rs.next())
+                visitas.add(mapRow(rs));
             return visitas;
         } catch (SQLException e) {
             throw new RuntimeException("Error al listar visitas: " + e.getMessage(), e);
@@ -93,14 +96,15 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public List<Visita> findByPersonaId(int personaId) {
         String sql = "SELECT id, persona_id, fecha_entrada, fecha_salida, "
-                   + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
-                   + "FROM visitas WHERE persona_id = ? ORDER BY fecha_entrada DESC";
+                + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
+                + "FROM visitas WHERE persona_id = ? ORDER BY fecha_entrada DESC";
         List<Visita> visitas = new ArrayList<>();
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, personaId);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) visitas.add(mapRow(rs));
+                while (rs.next())
+                    visitas.add(mapRow(rs));
             }
             return visitas;
         } catch (SQLException e) {
@@ -111,13 +115,15 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public List<Visita> findEnCurso() {
         String sql = "SELECT id, persona_id, fecha_entrada, fecha_salida, "
-                   + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
-                   + "FROM visitas WHERE fecha_salida IS NULL ORDER BY fecha_entrada DESC";
+                + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
+                + "FROM visitas WHERE  fecha_salida IS NULL ORDER BY fecha_entrada DESC";
         List<Visita> visitas = new ArrayList<>();
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) visitas.add(mapRow(rs));
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next())
+                    visitas.add(mapRow(rs));
+            }
             return visitas;
         } catch (SQLException e) {
             throw new RuntimeException("Error al buscar visitas en curso: " + e.getMessage(), e);
@@ -127,14 +133,15 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public List<Visita> findByEstadoVisitaId(int estadoVisitaId) {
         String sql = "SELECT id, persona_id, fecha_entrada, fecha_salida, "
-                   + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
-                   + "FROM visitas WHERE estado_visita_id = ? ORDER BY fecha_entrada DESC";
+                + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
+                + "FROM visitas WHERE estado_visita_id = ? ORDER BY fecha_entrada DESC";
         List<Visita> visitas = new ArrayList<>();
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, estadoVisitaId);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) visitas.add(mapRow(rs));
+                while (rs.next())
+                    visitas.add(mapRow(rs));
             }
             return visitas;
         } catch (SQLException e) {
@@ -145,14 +152,15 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public List<Visita> findByFechaEntrada(String fecha) {
         String sql = "SELECT id, persona_id, fecha_entrada, fecha_salida, "
-                   + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
-                   + "FROM visitas WHERE DATE(fecha_entrada) = ? ORDER BY fecha_entrada";
+                + "estado_visita_id, vehiculo_placa, visita_aprobada_por "
+                + "FROM visitas WHERE DATE(fecha_entrada) = ? ORDER BY fecha_entrada";
         List<Visita> visitas = new ArrayList<>();
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, fecha);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) visitas.add(mapRow(rs));
+                while (rs.next())
+                    visitas.add(mapRow(rs));
             }
             return visitas;
         } catch (SQLException e) {
@@ -163,9 +171,9 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     @Override
     public void actualizar(Visita visita) {
         String sql = "UPDATE visitas SET persona_id=?, fecha_entrada=?, fecha_salida=?, "
-                   + "estado_visita_id=?, vehiculo_placa=?, visita_aprobada_por=? WHERE id=?";
+                + "estado_visita_id=?, vehiculo_placa=?, visita_aprobada_por=? WHERE id=?";
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, visita.getPersonaId());
             if (visita.getFechaEntrada() != null) {
                 ps.setTimestamp(2, Timestamp.valueOf(visita.getFechaEntrada()));
@@ -195,11 +203,33 @@ public class VisitaRepositoryImpl implements VisitaRepository {
     public void eliminar(int id) {
         String sql = "DELETE FROM visitas WHERE id = ?";
         try (Connection conn = dbConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+                PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error al eliminar visita: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<Visita> findEnCursoPorEmpresa(int empresaId) {
+        String sql = "SELECT vi.id, vi.persona_id, vi.fecha_entrada, vi.fecha_salida, "
+                + "vi.estado_visita_id, vi.vehiculo_placa, vi.visita_aprobada_por "
+                + "FROM visitas vi "
+                + "JOIN personas pe ON pe.id = vi.persona_id "
+                + "JOIN empresas em ON pe.empresa_id = em.id "
+                + "WHERE em.id = ? AND fecha_salida IS NULL ORDER BY fecha_entrada DESC";
+        List<Visita> visitas = new ArrayList<>();
+        try (Connection conn = dbConfig.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, empresaId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next())
+                    visitas.add(mapRow(rs));
+            }
+            return visitas;
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al buscar visitas en curso: " + e.getMessage(), e);
         }
     }
 

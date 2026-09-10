@@ -86,6 +86,19 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     }
 
     @Override
+    public int findIdEmpresa() {
+        String sql = "SELECT em.id FROM usuarios u JOIN visitas vi ON vi.visita_aprobada_por = u.id JOIN personas ORDER BY id";
+        try (Connection conn = dbConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) usuarios.add(mapRow(rs));
+            return usuarios;
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al listar usuarios: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public void actualizar(Usuario usuario) {
         String sql = "UPDATE usuarios SET nombre=?, email=?, password=?, rol_id=?, esta_activo=? WHERE id=?";
         try (Connection conn = dbConfig.getConnection();
